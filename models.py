@@ -5,10 +5,11 @@ class GMF(nn.Module):
     def __init__(self, num_users, num_items, emb_dim, bias=True, initial_range=0.02):
         super().__init__()
         self.initial_range = initial_range
+        self.bias = bias
 
         self.user_emb = nn.Embedding(num_users, emb_dim)
         self.item_emb = nn.Embedding(num_items, emb_dim)
-        if bias:
+        if self.bias:
             self.user_bias = nn.Parameter(torch.zeros(num_users, 1))
             self.item_bias = nn.Parameter(torch.zeros(num_items, 1))
             self.global_bias = nn.Parameter(torch.zeros(1))
@@ -68,7 +69,7 @@ class MLP(nn.Module):
         return out.squeeze(-1)
 
 class NeuMF(nn.Module):
-    def __init__(self, num_users, num_items, emb_dim, layers, dropouts, batch_norm=True, bias=True, initial_range=0.02):
+    def __init__(self, num_users, num_items, emb_dim, layers, dropouts, batch_norm=True, initial_range=0.02):
         super().__init__()
         assert len(layers) == len(dropouts) + 1, "len(layers) must be len(dropouts) + 1"
         self.initial_range = initial_range

@@ -13,6 +13,7 @@ from train_test_utils import test
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="gmf", choices=["gmf", "mlp", "neumf"])
+    parser.add_argument("--bias", type=bool, default=True)
     parser.add_argument("--emb-dim", type=int, default=32)
     parser.add_argument("--layers", type=list, default=[64, 32, 16])
     parser.add_argument("--dropouts", type=list, default=[0.3, 0.4])
@@ -38,7 +39,7 @@ def main():
     loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
     if args.model == "gmf":
-        model = GMF(num_users, num_items, args.emb_dim).to(device)
+        model = GMF(num_users, num_items, args.emb_dim, args.bias).to(device)
     elif args.model == "mlp":
         model = MLP(num_users, num_items, args.layers, args.dropouts, args.batch_norm).to(device)
     elif args.model == "neumf":
@@ -53,3 +54,6 @@ def main():
     test_loss = test(model, loader, criterion, device)
 
     print(f"test loss {test_loss:.4f}")
+
+if __name__ == "__main__":
+    main()

@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from data_utils import download_ml1m, data_split
 from models import GMF, MLP, NeuMF
-from train_utils import train, validate, EarlyStopper, epoch_log
+from train_test_utils import train, validate, EarlyStopper, epoch_log
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -21,6 +21,7 @@ def parse_args():
 
     parser.add_argument("--model", type=str, default="gmf", choices=["gmf", "mlp", "neumf"])
     parser.add_argument("--emb-dim", type=int, default=32)
+    parser.add_argument("--bias", type=bool, default=True)
     parser.add_argument("--layers", type=list, default=[64, 32, 16])
     parser.add_argument("--dropouts", type=list, default=[0.3, 0.4])
     parser.add_argument("--batch-norm", type=bool, default=True)
@@ -51,7 +52,7 @@ def main():
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
     if args.model == "gmf":
-        model = GMF(num_users, num_items, args.emb_dim).to(device)
+        model = GMF(num_users, num_items, args.emb_dim, args.bias).to(device)
     elif args.model == "mlp":
         model = MLP(num_users, num_items, args.layers, args.dropouts, args.batch_norm).to(device)
     elif args.model == "neumf":
