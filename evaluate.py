@@ -15,8 +15,8 @@ def parse_args():
     parser.add_argument("--model", type=str, default="gmf", choices=["gmf", "mlp", "neumf"])
     parser.add_argument("--bias", type=bool, default=True)
     parser.add_argument("--emb-dim", type=int, default=32)
-    parser.add_argument("--layers", type=list, default=[64, 32, 16])
-    parser.add_argument("--dropouts", type=list, default=[0.3, 0.4])
+    parser.add_argument("--layers", nargs='+', type=int, default=[64, 32, 16])
+    parser.add_argument("--dropouts", nargs='+', type=float, default=[0.3, 0.4])
     parser.add_argument("--batch-norm", type=bool, default=True)
     parser.add_argument("--model-path", type=str, required=True)
 

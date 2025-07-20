@@ -8,20 +8,19 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from data_utils import download_ml1m, data_split, mf_data_preprocess
-from models import GMF, MLP, NeuMF
+from data_utils import download_ml1m, data_split, get_features, FMDataset
+from models import FM, NeuFM
 from train_test_utils import train, validate, EarlyStopper, epoch_log
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--sort", type=bool, default=False)
+    parser.add_argument("--sort", type=bool, default=True)
     parser.add_argument("--batch-size", type=int, default=1024)
     parser.add_argument("--num-workers", type=int, default=4)
 
-    parser.add_argument("--model", type=str, default="gmf", choices=["gmf", "mlp", "neumf"])
-    parser.add_argument("--emb-dim", type=int, default=32)
-    parser.add_argument("--bias", type=bool, default=True)
+    parser.add_argument("--model", type=str, default="fm", choices=["fm", "neufm"])
+    parser.add_argument("--emb-dim", type=int, default=64)
     parser.add_argument("--layers", nargs='+', type=int, default=[64, 32, 16])
     parser.add_argument("--dropouts", nargs='+', type=float, default=[0.3, 0.4])
     parser.add_argument("--batch-norm", type=bool, default=True)
@@ -46,18 +45,21 @@ def main():
     download_ml1m()
 
     ratings_df = pd.read_csv("./ml-1m/ratings.dat", sep="::", header=None, names=["user_id", "movie_id", "rating", "timestamp"], engine="python")
-    train_df, val_df, test_df = data_split(ratings_df, test_ratio=0.2, sort=args.sort)
-    train_set, val_set, _, num_users, num_items, _, _ = mf_data_preprocess(train_df, val_df, test_df)
+    users_df = pd.read_csv("./ml-1m/users.dat", sep="::", header=None, names=["user_id", "gender", "age", "occupation", "zip_code"], engine="python")
+    movies_df = pd.read_csv("./ml-1m/movies.dat", sep="::", header=None, names=["movie_id", "title", "genres"], engine="python")
+    train_df, val_df, _ = data_split(ratings_df, test_ratio=0.2, sort=args.sort)
+    user_index_by_id, movie_index_by_id, user_features, movie_features, total_inputs, _, _, num_genres = get_features(users_df, movies_df)
+
+    train_set = FMDataset(train_df, num_genres, user_index_by_id, movie_index_by_id, user_features, movie_features, total_inputs)
+    val_set = FMDataset(val_df, num_genres, user_index_by_id, movie_index_by_id, user_features, movie_features, total_inputs)
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True)
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
-    if args.model == "gmf":
-        model = GMF(num_users, num_items, args.emb_dim, args.bias).to(device)
-    elif args.model == "mlp":
-        model = MLP(num_users, num_items, args.layers, args.dropouts, args.batch_norm).to(device)
-    elif args.model == "neumf":
-        model = NeuMF(num_users, num_items, args.emb_dim, args.layers, args.dropouts, args.batch_norm).to(device)
+    if args.model == "fm":
+        model = FM(total_inputs, args.emb_dim).to(device)
+    elif args.model == "neufm":
+        model = NeuFM(total_inputs, args.layers, args.dropouts, args.batch_norm).to(device)
     else:
         raise ValueError(f"Invalid model: {args.model}")
     model = nn.DataParallel(model)

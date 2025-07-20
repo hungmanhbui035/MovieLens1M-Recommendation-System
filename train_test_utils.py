@@ -27,7 +27,7 @@ def train(epoch, model, loader, criterion, optimizer, scheduler, device, log_fre
     for step, (idx, rating) in enumerate(tqdm.tqdm(loader, desc=f"Train epoch {epoch}")):
         idx, rating = idx.to(device, non_blocking=True), rating.to(device, non_blocking=True)
 
-        outputs = model(idx[:, 0], idx[:, 1])
+        outputs = model(idx)
         loss = criterion(outputs, rating)
         optimizer.zero_grad()
         loss.backward()
@@ -51,7 +51,7 @@ def validate(epoch, model, loader, criterion, device):
         for idx, rating in tqdm.tqdm(loader, desc=f"Val epoch {epoch}"):
             idx, rating = idx.to(device, non_blocking=True), rating.to(device, non_blocking=True)
 
-            outputs = model(idx[:, 0], idx[:, 1])
+            outputs = model(idx)
             loss = criterion(outputs, rating)
 
             total_loss += loss.item()
@@ -88,7 +88,7 @@ def test(model, loader, criterion, device):
         for idx, rating in tqdm.tqdm(loader):
             idx, rating = idx.to(device, non_blocking=True), rating.to(device, non_blocking=True)
 
-            outputs = model(idx[:, 0], idx[:, 1])
+            outputs = model(idx)
             loss = criterion(outputs, rating)
 
             total_loss += loss.item()
