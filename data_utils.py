@@ -173,7 +173,7 @@ class FMDataset(Dataset):
         movie_feature = self.movie_features[movie_index]
         padding_size = self.max_size - len(user_feature) - len(movie_feature)
         feature = user_feature + movie_feature + [self.total_inputs] * padding_size
-        return torch.LongTensor(feature), rating
+        return torch.LongTensor(feature), torch.tensor(rating, dtype=torch.float32)
 
 
 

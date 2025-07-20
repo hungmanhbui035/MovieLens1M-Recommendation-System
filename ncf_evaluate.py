@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from data_utils import download_ml1m, data_split
+from data_utils import download_ml1m, data_split, mf_data_preprocess
 from models import GMF, MLP, NeuMF
 from train_test_utils import test
 
@@ -34,7 +34,8 @@ def main():
     download_ml1m()
 
     ratings_df = pd.read_csv("./ml-1m/ratings.dat", sep="::", header=None, names=["user_id", "movie_id", "rating", "timestamp"], engine="python")
-    _, _, test_set, num_users, num_items, _, _ = data_split(ratings_df, test_ratio=0.2, sort=args.sort)
+    train_df, val_df, test_df = data_split(ratings_df, test_ratio=0.2, sort=args.sort)
+    _, _, test_set, num_users, num_items, _, _ = mf_data_preprocess(train_df, val_df, test_df)
 
     loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 

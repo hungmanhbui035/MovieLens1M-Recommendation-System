@@ -46,7 +46,7 @@ def main():
 
     ratings_df = pd.read_csv("./ml-1m/ratings.dat", sep="::", header=None, names=["user_id", "movie_id", "rating", "timestamp"], engine="python")
     users_df = pd.read_csv("./ml-1m/users.dat", sep="::", header=None, names=["user_id", "gender", "age", "occupation", "zip_code"], engine="python")
-    movies_df = pd.read_csv("./ml-1m/movies.dat", sep="::", header=None, names=["movie_id", "title", "genres"], engine="python")
+    movies_df = pd.read_csv("./ml-1m/movies.dat", sep="::", header=None, names=["movie_id", "title", "genres"], engine="python", encoding="latin-1")
     train_df, val_df, _ = data_split(ratings_df, test_ratio=0.2, sort=args.sort)
     user_index_by_id, movie_index_by_id, user_features, movie_features, total_inputs, _, _, num_genres = get_features(users_df, movies_df)
 
