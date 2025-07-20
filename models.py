@@ -2,15 +2,16 @@ import torch
 import torch.nn as nn
 
 class GMF(nn.Module):
-    def __init__(self, num_users, num_items, emb_dim, initial_range=0.02):
+    def __init__(self, num_users, num_items, emb_dim, bias=True, initial_range=0.02):
         super().__init__()
         self.initial_range = initial_range
 
         self.user_emb = nn.Embedding(num_users, emb_dim)
         self.item_emb = nn.Embedding(num_items, emb_dim)
-        self.user_bias = nn.Parameter(torch.zeros(num_users, 1))
-        self.item_bias = nn.Parameter(torch.zeros(num_items, 1))
-        self.global_bias = nn.Parameter(torch.zeros(1))
+        if bias:
+            self.user_bias = nn.Parameter(torch.zeros(num_users, 1))
+            self.item_bias = nn.Parameter(torch.zeros(num_items, 1))
+            self.global_bias = nn.Parameter(torch.zeros(1))
         self.head = nn.Linear(emb_dim, 1)
 
         self._init_weights()
@@ -23,7 +24,9 @@ class GMF(nn.Module):
         user_emb = self.user_emb(user_idx)
         item_emb = self.item_emb(item_idx)
 
-        out = self.head(user_emb * item_emb) + self.user_bias[user_idx] + self.item_bias[item_idx] + self.global_bias
+        out = self.head(user_emb * item_emb)
+        if self.bias:
+            out += self.user_bias[user_idx] + self.item_bias[item_idx] + self.global_bias
         return out.squeeze(-1)
 
 class MLP(nn.Module):
@@ -65,16 +68,13 @@ class MLP(nn.Module):
         return out.squeeze(-1)
 
 class NeuMF(nn.Module):
-    def __init__(self, num_users, num_items, emb_dim, layers, dropouts, batch_norm=True, initial_range=0.02):
+    def __init__(self, num_users, num_items, emb_dim, layers, dropouts, batch_norm=True, bias=True, initial_range=0.02):
         super().__init__()
         assert len(layers) == len(dropouts) + 1, "len(layers) must be len(dropouts) + 1"
         self.initial_range = initial_range
 
         self.user_emb_gmf = nn.Embedding(num_users, emb_dim)
         self.item_emb_gmf = nn.Embedding(num_items, emb_dim)
-        self.user_bias_gmf = nn.Parameter(torch.zeros(num_users, 1))
-        self.item_bias_gmf = nn.Parameter(torch.zeros(num_items, 1))
-        self.global_bias_gmf = nn.Parameter(torch.zeros(1))
 
         self.user_emb_mlp = nn.Embedding(num_users, layers[0] // 2)
         self.item_emb_mlp = nn.Embedding(num_items, layers[0] // 2)
@@ -95,11 +95,11 @@ class NeuMF(nn.Module):
         self._init_weights()
 
     def _init_weights(self):
-        nn.init.normal_(self.user_emb_gmf.weight, std=0.01)
-        nn.init.normal_(self.item_emb_gmf.weight, std=0.01)
+        nn.init.normal_(self.user_emb_gmf.weight, std=self.initial_range)
+        nn.init.normal_(self.item_emb_gmf.weight, std=self.initial_range)
 
-        nn.init.normal_(self.user_emb_mlp.weight, std=0.01)
-        nn.init.normal_(self.item_emb_mlp.weight, std=0.01)
+        nn.init.normal_(self.user_emb_mlp.weight, std=self.initial_range)
+        nn.init.normal_(self.item_emb_mlp.weight, std=self.initial_range)
 
     def forward(self, user_idx, item_idx):
         # gmf
@@ -116,5 +116,5 @@ class NeuMF(nn.Module):
 
         # combine
         vector = torch.cat([gmf_vector, mlp_vector], dim=1)
-        out = self.head(vector) + self.user_bias_gmf[user_idx] + self.item_bias_gmf[item_idx] + self.global_bias_gmf
+        out = self.head(vector)
         return out.squeeze(-1)
