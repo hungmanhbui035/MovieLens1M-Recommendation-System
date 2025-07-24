@@ -49,15 +49,17 @@ def mf_data_preprocess(train_df, val_df, test_df):
     all_item_ids = train_df["movie_id"].unique()
     num_users, num_items = len(all_user_ids), len(all_item_ids)
 
-    val_df = val_df[val_df["user_id"].isin(all_user_ids) & val_df["movie_id"].isin(all_item_ids)]
-    test_df = test_df[test_df["user_id"].isin(all_user_ids) & test_df["movie_id"].isin(all_item_ids)]
+    # Use .copy() to ensure we have actual DataFrames, not views
+    val_df = val_df[val_df["user_id"].isin(all_user_ids) & val_df["movie_id"].isin(all_item_ids)].copy()
+    test_df = test_df[test_df["user_id"].isin(all_user_ids) & test_df["movie_id"].isin(all_item_ids)].copy()
 
     user_id_mapping = {uid: idx for idx, uid in enumerate(sorted(all_user_ids))}
     item_id_mapping = {aid: idx for idx, aid in enumerate(sorted(all_item_ids))}
 
+    # Use .loc[] for safer assignment
     for df in [train_df, val_df, test_df]:
-        df['user_id'] = df['user_id'].map(user_id_mapping)
-        df['movie_id'] = df['movie_id'].map(item_id_mapping)
+        df.loc[:, 'user_id'] = df['user_id'].map(user_id_mapping)
+        df.loc[:, 'movie_id'] = df['movie_id'].map(item_id_mapping)
     
     train_tensor = torch.tensor(train_df[['user_id', 'movie_id', 'rating']].values, dtype=torch.long)
     val_tensor = torch.tensor(val_df[['user_id', 'movie_id', 'rating']].values, dtype=torch.long)
@@ -67,7 +69,7 @@ def mf_data_preprocess(train_df, val_df, test_df):
     val_set = TensorDataset(val_tensor[:, :2], val_tensor[:, 2].to(torch.float32))
     test_set = TensorDataset(test_tensor[:, :2], test_tensor[:, 2].to(torch.float32))
 
-    return train_set, val_set, test_set, num_users, num_items, user_id_mapping, item_id_mapping
+    return train_df, val_df, test_df, train_set, val_set, test_set, num_users, num_items, user_id_mapping, item_id_mapping
 
 def get_features(users_df, movies_df):
     # user_features
@@ -174,6 +176,23 @@ class FMDataset(Dataset):
         padding_size = self.max_size - len(user_feature) - len(movie_feature)
         feature = user_feature + movie_feature + [self.total_inputs] * padding_size
         return torch.LongTensor(feature), torch.tensor(rating, dtype=torch.float32)
+    
+def get_not_seen_movies(user_id, train_df, val_df, test_df):
+    # Collect all movies the user has seen across all datasets
+    
+    seen_movies = set()
+    for df in [train_df, val_df, test_df]:
+        user_movies = df[df["user_id"] == user_id]["movie_id"].tolist()
+        seen_movies.update(user_movies)
+    
+    all_movies = set()
+    for df in [train_df, val_df, test_df]:
+        all_movies.update(df["movie_id"].unique())
+    
+    # Use set subtraction to find unseen movies
+    not_seen_movies = list(all_movies - seen_movies)
+    
+    return seen_movies, not_seen_movies
 
 
 

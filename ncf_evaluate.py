@@ -35,7 +35,7 @@ def main():
 
     ratings_df = pd.read_csv("./ml-1m/ratings.dat", sep="::", header=None, names=["user_id", "movie_id", "rating", "timestamp"], engine="python")
     train_df, val_df, test_df = data_split(ratings_df, test_ratio=0.2, sort=args.sort)
-    _, _, test_set, num_users, num_items, _, _ = mf_data_preprocess(train_df, val_df, test_df)
+    _, _, _, _, _, test_set, num_users, num_items, _, _ = mf_data_preprocess(train_df, val_df, test_df)
 
     loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
